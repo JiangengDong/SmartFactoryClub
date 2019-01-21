@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="dongjiangeng@gmail.com">
+    <title>
+        {% block title %}
+        {% endblock %}
+    </title>
+    <link rel="stylesheet" href="{% static 'blog/css/bootstrap.min.css' %}">
+</head>
+<body onload="activeNav()">
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+
+    <div class="collapse navbar-collapse nav-tabs" id="navbarNav">
+        <div class="navbar-nav">
+            <a class="nav-link" href="{% url 'blog:index' %}">首页</a>
+            {% for category in categories %}
+                <a class="nav-link" href="{% url 'blog:category' category.name %}">{{ category.name }}</a>
+            {% endfor %}
+        </div>
+    </div>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <a class="navbar-brand" href="{% url 'blog:index' %}">{{ site_name }}</a>
+</nav>
+
+{% block body %}
+
+{% endblock %}
+
+<script src="{% static 'blog/js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'blog/js/popper.min.js' %}"></script>
+<script src="{% static 'blog/js/bootstrap.min.js' %}"></script>
+<script>
+    function activeNav() {
+        let navbar = document.getElementById('navbarNav');
+        navbar = navbar.children[0];
+        let currentHref = window.location.pathname;
+        for (let anchor of navbar.children) {
+            let anchorHref = anchor.getAttribute('href');
+            if (anchorHref === '/' && anchor.getAttribute('href') === currentHref) {
+                anchor.setAttribute('class', 'nav-link active');
+                break;
+            }
+            else if (currentHref.startsWith(anchorHref)) {
+                anchor.setAttribute('class', 'nav-link active');
+                break;
+            }
+        }
+    }
+</script>
+</body>
+</html>

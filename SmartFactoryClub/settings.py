@@ -25,7 +25,7 @@ SECRET_KEY = '_y)uti)s2oiuz4(nxbnk*vu2m%f(0ia(#1x5&%@5(zq=!tntho'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['198.13.48.253']
+ALLOWED_HOSTS = ['198.13.48.253', '127.0.0.1', '192.168.5.104']
 
 
 # Application definition
@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'blog.apps.BlogConfig',
 ]
 
 MIDDLEWARE = [
@@ -63,6 +64,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'blog.custom_context.customContext'
             ],
         },
     },
@@ -119,3 +121,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+STATIC_ROOT = '/static/'
+
+
+# user defined settings
+
+SITE_NAME = '智能工厂俱乐部'
