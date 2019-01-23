@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="author" content="dongjiangeng@gmail.com">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0" />
     <title>
         {% block title %}
         {% endblock %}
@@ -11,21 +12,20 @@
     <link rel="stylesheet" href="{% static 'blog/css/bootstrap.min.css' %}">
 </head>
 <body onload="activeNav()">
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-
-    <div class="collapse navbar-collapse nav-tabs" id="navbarNav">
-        <div class="navbar-nav">
-            <a class="nav-link" href="{% url 'blog:index' %}">首页</a>
-            {% for category in categories %}
-                <a class="nav-link" href="{% url 'blog:category' category.name %}">{{ category.name }}</a>
-            {% endfor %}
-        </div>
-    </div>
+<nav class="navbar navbar-expand-lg sticky-top navbar-dark bg-dark">
+    <a class="navbar-brand mr-5" href="{% url 'blog:index' %}">{{ site_name }}</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
-    <a class="navbar-brand" href="{% url 'blog:index' %}">{{ site_name }}</a>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <div class="navbar-nav">
+            <a class="nav-item nav-link mx-3" href="{% url 'blog:index' %}">首页</a>
+            {% for category in categories %}
+                <a class="nav-item nav-link mx-3" href="{% url 'blog:category' category.name %}">{{ category.name }}</a>
+            {% endfor %}
+        </div>
+    </div>
 </nav>
 
 {% block body %}
@@ -40,14 +40,19 @@
         let navbar = document.getElementById('navbarNav');
         navbar = navbar.children[0];
         let currentHref = window.location.pathname;
+        console.log(currentHref);
         for (let anchor of navbar.children) {
             let anchorHref = anchor.getAttribute('href');
-            if (anchorHref === '/' && anchor.getAttribute('href') === currentHref) {
-                anchor.setAttribute('class', 'nav-link active');
-                break;
+            console.log(anchorHref);
+            if (anchorHref === '/') {
+                if (currentHref === '/') {
+                    console.log('enter');
+                    anchor.setAttribute('class', 'nav-item nav-link mx-3 active');
+                    break;
+                }
             }
             else if (currentHref.startsWith(anchorHref)) {
-                anchor.setAttribute('class', 'nav-link active');
+                anchor.setAttribute('class', 'nav-item nav-link mx-3 active');
                 break;
             }
         }
