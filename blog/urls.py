@@ -1,11 +1,11 @@
 from django.urls import path
 
 from . import views
-from .models import Category
 
 app_name = 'blog'
 urlpatterns = [
-    path('<str:categoryName>/', views.CategoryView.as_view(), name='category'),
-    path('<str:categoryName>/<str:articleTitle>', views.ArticleView.as_view(), name='article'),
     path('', views.indexView, name='index'),
+    path('cat_<str:cat>/sub_<str:sub>/', views.SubCategoryView.as_view(), name='subcategory'),
+    path('cat_<str:cat>/art_<str:art>/', views.ArticleView.as_view(), name='article1'),
+    path('cat_<str:cat>/sub_<str:sub>/art_<str:art>/', views.ArticleView.as_view(), name='article2'),
 ]

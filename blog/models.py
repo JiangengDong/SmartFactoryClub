@@ -5,176 +5,173 @@ from django.db import models
 from django.contrib.auth.models import User, Group
 from django.utils import timezone, datetime_safe
 from django.urls import reverse
+from mptt.models import MPTTModel, TreeForeignKey
 import markdown
 from xpinyin import Pinyin
 import datetime
+import re
+import shutil
 
 
-class Category(models.Model):
-    # field that are editable
-    name = models.CharField(max_length=64,
-                            verbose_name='分类')
+def convertToAscii(str, forbidden=r'[\\\-\"\'/:*?<>|,@#$&();+.!%]'):
+    return re.sub('[^\x00-\xff]', '_',
+                  re.sub(forbidden, '_',
+                         Pinyin().get_pinyin(str, "")))
+
+def storage_redirect(instance, name):
+    name = convertToAscii(instance.name) + '.' + name.split('.')[-1]
+    ids = list(map(str, instance.article.category.get_ancestors(include_self=True).values_list('id', flat=True)))
+    path = os.path.join(*ids)
+    return os.path.join(path, str(instance.article_id), name)
+
+
+class CommonInfo(models.Model):
+    # editable
+    name = models.CharField(max_length=25,
+                            blank=False,
+                            verbose_name='名称',
+                            help_text='不允许与其他条目重复。')
+    # not editable (used to record)
+    timeModify = models.DateTimeField(default=timezone.now,
+                                      editable=False,
+                                      verbose_name='修改时间')
+    userModify = models.ForeignKey(to=User,
+                                   on_delete=models.SET_NULL,
+                                   null=True,
+                                   editable=False,
+                                   related_name='%(class)s_modified',
+                                   verbose_name='修改者')
+    timeCreate = models.DateTimeField(default=timezone.now,
+                                      editable=False,
+                                      verbose_name='创建时间')
+    userCreate = models.ForeignKey(to=User,
+                                   on_delete=models.SET_NULL,
+                                   null=True,
+                                   editable=False,
+                                   related_name='%(class)s_created',
+                                   verbose_name='创建者')
+
+    class Meta:
+        abstract = True
+        db_table = '%(app_label)s_%(class)s'
+
+
+class Category(MPTTModel, CommonInfo):
+    # Tree
+    parent = TreeForeignKey(to='self',
+                            on_delete=models.CASCADE,
+                            null=True,
+                            blank=True,
+                            related_name='children',
+                            verbose_name='上级目录',
+                            help_text='若上级目录为空，则此目录为顶级目录。')
     group = models.ForeignKey(to=Group,
                               on_delete=models.SET_NULL,
+                              blank=True,
                               null=True,
-                              verbose_name='用户组')
+                              verbose_name='组',
+                              help_text='组内用户有此条目下文章的编辑权限。')
+    level = models.PositiveIntegerField(default=0,
+                                        editable=False,
+                                        verbose_name='等级')
 
-    # fields that are not editable (used to record)
-    timeModify = models.DateTimeField(default=timezone.now,
-                                      verbose_name='上次修改时间',
-                                      editable=False)
 
-    # methods for getting attribution
-    def numArticle(self):
-        return self.article_set.count()
-
-    numArticle.short_description = '文章数量'
-
-    # methods for better display
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('blog:category', kwargs={'categoryName': self.name})
+        if self.is_root_node():
+            if self.children.exists():
+                return self.children.first().get_absolute_url()
+            elif self.article_set.exists():
+                return self.article_set.first().get_absolute_url()
+            else:
+                return '#'
+        elif self.level == 1:
+            return reverse('blog:subcategory', kwargs={'cat': self.parent.name, 'sub': self.name})
+        else:
+            return '#'
 
-    # pre- and post- operations
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        self.timeModify = timezone.now()
-        return super().save(force_insert, force_update, using, update_fields)
+    class MPTTMeta:
+        order_insertion_by = []
+        level_attr = 'level'
 
-    def delete(self, using=None, keep_parents=False):
-        os.removedirs(os.path.join(settings.MEDIA_ROOT, str(self.id)))
-        return super().delete(using, keep_parents)
-
-    # A user-friendly name for this model
     class Meta:
-        verbose_name = '分类'
-        verbose_name_plural = '分类'
+        verbose_name = '目录'
+        verbose_name_plural = '目录'
 
 
-class Article(models.Model):
-    # field that are editable
-    title = models.CharField(max_length=64,
-                             verbose_name='网页标题')
-    MarkdownBody = models.TextField(default=' ',
-                                    null=True,
+class Article(CommonInfo):
+    category = TreeForeignKey(to=Category,
+                              on_delete=models.CASCADE,
+                              null=True,
+                              verbose_name='类别')
+    markdownBody = models.TextField(default=' ',
                                     blank=True,
                                     verbose_name='正文')
-    timePublish = models.DateTimeField(verbose_name='发布时间')
-    category = models.ForeignKey(to=Category,
-                                 on_delete=models.CASCADE,
-                                 verbose_name='类别')
-    # fields that are not editable (used to record)
-    author = models.ForeignKey(to=User,
-                               on_delete=models.SET_NULL,
-                               null=True,
-                               related_name='author',
-                               verbose_name='创建者',
-                               editable=False)
-    modifier = models.ForeignKey(to=User,
-                                 on_delete=models.SET_NULL,
-                                 null=True,
-                                 related_name='modifier',
-                                 verbose_name='修改者',
-                                 editable=False)
-    timeCreate = models.DateTimeField(verbose_name='创建时间',
-                                      editable=False)
-    timeModify = models.DateTimeField(verbose_name='上次修改时间',
-                                      editable=False)
+    timePublish = models.DateTimeField(blank=True,
+                                       null=True,
+                                       verbose_name='发布时间')
+    status = models.BooleanField(default=False,
+                                 verbose_name='发布状态')
     body = models.TextField(default=' ',
-                            null=True,
                             blank=True,
                             editable=False)
 
-    # methods for getting attribution
-    def hasPublished(self):
-        if self.timePublish < timezone.now():
-            return 'Publish'
-        else:
-            return 'Draft'
-
-    hasPublished.short_description = '发布状态'
-
-    # methods for better display
     def __str__(self):
-        return self.title
+        ancestors = self.category.get_ancestors(include_self=True).values_list('name', flat=True)
+        categoryPath = '/'.join(ancestors)
+        return '/'.join([categoryPath, self.name])
 
     def get_absolute_url(self):
-        return reverse('blog:article', kwargs={'categoryName': self.category.name, 'articleTitle': self.title})
+        if self.category.is_root_node():
+            return reverse('blog:article1', kwargs={'cat': self.category.name, 'art': self.name})
+        elif self.category.level == 1:
+            return reverse('blog:article2', kwargs={'cat': self.category.parent.name,
+                                                    'sub': self.category.name,
+                                                    'art': self.name})
+        else:
+            return '#'
 
-    # pre- and post- operations
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        self.timePublish = self.timePublish or (timezone.now() + datetime.timedelta(days=3650))
-        self.timeCreate = self.timeCreate or timezone.now()
-        self.timeModify = timezone.now()
-        self.body = markdown.markdown(self.MarkdownBody)
-        self.category.save()
-        return super().save(force_insert, force_update, using, update_fields)
 
-    def delete(self, using=None, keep_parents=False):
-        os.removedirs(os.path.join(settings.MEDIA_ROOT, str(self.category.id), str(self.id)))
-        return super().delete(using, keep_parents)
-
-    # A user-friendly name for this model
     class Meta:
-        verbose_name = '文章'
         verbose_name_plural = '文章'
+        verbose_name = '文章'
+        permissions = (
+            ('publish_article', 'Can publish 文章'),
+        )
 
 
-def storage_redirect(instance, name):
-    article = instance.article
-    category = article.category
-    ext = name.split('.')[-1]
-    name = Pinyin().get_pinyin(instance.name, '_') + '.' + ext
-    return os.path.join(str(category.id), str(article.id), name)
-
-
-class Picture(models.Model):
-    # field that are editable
-    name = models.CharField(max_length=64,
-                            verbose_name='图片名称')
-    img = models.ImageField(upload_to=storage_redirect,
-                            verbose_name='图片')
+class Resource(CommonInfo):
+    file = models.FileField(upload_to=storage_redirect,
+                            verbose_name='文件')
     article = models.ForeignKey(to=Article,
                                 on_delete=models.CASCADE,
                                 verbose_name='文章')
-    # fields that are not editable (used to record)
     url = models.CharField(max_length=64,
                            blank=True,
-                           editable=False)
-    timeCreate = models.DateTimeField(verbose_name='创建时间',
-                                      default=timezone.now,
-                                      editable=False)
-    painter = models.ForeignKey(to=User,
-                                on_delete=models.SET_NULL,
-                                null=True,
-                                related_name='painter',
-                                verbose_name='创建者',
-                                editable=False)
+                           editable=False,
+                           verbose_name='访问路径')
 
-    # methods for better display
     def __str__(self):
-        return self.name
+        return str(self.article) + '/' + self.name
 
     def get_absolute_url(self):
         return self.url
 
-    # pre- and post- operations
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
-        self.timeCreate = timezone.now()
-        self.article.save()
         super().save(force_insert, force_update, using, update_fields)
-        self.url = self.img.url
+        self.url = self.file.url
         return super().save(force_insert, force_update, using, update_fields)
 
     def delete(self, using=None, keep_parents=False):
-        os.remove(os.path.join(settings.MEDIA_ROOT, self.img.name))
+        args = [settings.MEDIA_ROOT] + self.url.split('/')[2:]
+        path = os.path.join(*args)
+        if os.path.exists(path):
+            os.remove(path)
         return super().delete(using, keep_parents)
 
-    # A user-friendly name for this model
     class Meta:
-        verbose_name = '图片'
-        verbose_name_plural = '图片'
+        verbose_name_plural = '资源'
+        verbose_name = '资源'

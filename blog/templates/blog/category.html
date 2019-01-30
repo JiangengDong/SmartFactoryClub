@@ -8,8 +8,60 @@
     <div class="container">
         <div class="list-group">
             {% for article in articles %}
-                <a class="list-group-item" href="{% url 'blog:article' category.name article.title %}">{{ article.title }}</a>
+                <a class="list-group-item list-group-item-action flex-column align-items-start"
+                   href="{{ article.get_absolute_url }}">
+                    <div class="d-flex w-100 justify-content-between">
+                        <div class="mb-1 d-none d-md-block">{{ article.name }}</div>
+                        <div class="mb-1 d-md-none">{{ article.name|truncatechars:12 }}</div>
+                        <div class="text-muted d-none d-md-block">{{ article.timePublish|date }}</div>
+                        <div class="text-muted small d-md-none align-self-center">{{ article.timePublish|date }}</div>
+                    </div>
+                </a>
             {% endfor %}
         </div>
     </div>
+    <nav aria-label="Page navigation" class="mt-1 small">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item d-md-block">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                        <span aria-hidden="true">&laquo;</span>
+                        <span class="sr-only">上一页</span>
+                    </a>
+                </li>
+            {% endif %}
+            {% for page in paginator.page_range %}
+                {# computers and tablets #}
+                {% if page_obj.number == page %}
+                    <li class="page-item d-none d-md-block active"><a class="page-link" href="?page={{ page }}">{{ page }}</a></li>
+                {% elif forloop.first or forloop.last %}
+                    <li class="page-item d-none d-md-block"><a class="page-link" href="?page={{ page }}">{{ page }}</a></li>
+                {% elif page_obj.number|add:2 >= page and page_obj.number|add:-2 <= page %}
+                    <li class="page-item d-none d-md-block"><a class="page-link" href="?page={{ page }}">{{ page }}</a></li>
+                {% elif forloop.counter == 2 or forloop.revcounter == 2 %}
+                    <li class="page-item d-none d-md-block page-link">...</li>
+                {% endif %}
+            {% endfor %}
+            {% for page in paginator.page_range %}
+                {# phones #}
+                {% if page_obj.number == page %}
+                    <li class="page-item d-md-none active"><a class="page-link" href="?page={{ page }}">{{ page }}</a></li>
+                {% elif forloop.first or forloop.last %}
+                    <li class="page-item d-md-none "><a class="page-link" href="?page={{ page }}">{{ page }}</a></li>
+                {% elif page_obj.number|add:1 >= page and page_obj.number|add:-1 <= page %}
+                    <li class="page-item d-md-none "><a class="page-link" href="?page={{ page }}">{{ page }}</a></li>
+                {% elif forloop.counter == 2 or forloop.revcounter == 2 %}
+                    <li class="page-item d-md-none page-link">...</li>
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+                <li class="page-item d-md-block">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                        <span aria-hidden="true">&raquo;</span>
+                        <span class="sr-only">下一页</span>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
 {% endblock %}

@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'mptt',
     'blog.apps.BlogConfig',
 ]
 
@@ -65,7 +66,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'blog.custom_context.customContext'
+                'blog.context_processors.global_context',
             ],
         },
     },
@@ -133,6 +134,6 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
-# user defined settings
+# Session expire time
 
-SITE_NAME = '智能工厂俱乐部'
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
