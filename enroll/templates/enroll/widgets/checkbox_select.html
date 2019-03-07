@@ -1,0 +1,24 @@
+{% with id=widget.attrs.id %}
+    <div {% if id %} id="{{ id }}"{% endif %}>
+        {% for group, options, index in widget.optgroups %}
+            <div class="form-check form-check-inline" {% if id %} id="{{ id }}_{{ index }}"{% endif %}>
+                {% for option in options %}
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="{{ option.name }}"
+                           {% if option.value %}value="{{ option.value|stringformat:'s' }}"{% endif %}
+                           {% if option.attrs.id %}id="{{ option.attrs.id }}"{% endif %}
+                           {% for name, value in option.attrs.items %}
+                               {% if value is not False %}
+                                   {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}
+                               {% endif %}
+                           {% endfor %}>
+                    <label class="form-check-label"
+                           {% if option.attrs.id %}for="{{ option.attrs.id }}"{% endif %}>
+                        {{ option.label }}
+                    </label>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+{% endwith %}

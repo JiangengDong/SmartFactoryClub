@@ -18,9 +18,9 @@ class SubCategoryView(ListView):
     paginate_by = 1
 
     def get_queryset(self):
-        self.category = get_object_or_404(Category, name=self.kwargs['cat'])
-        self.subcategory = get_object_or_404(self.category.children, name=self.kwargs['sub'])
-        return self.subcategory.article_set.all()
+        self.category = get_object_or_404(Category, id=self.kwargs['cat'])
+        self.subcategory = get_object_or_404(self.category.children, id=self.kwargs['sub'])
+        return self.subcategory.article_set.filter(status=True, timePublish__lt=timezone.now())
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -34,17 +34,22 @@ class ArticleView(DetailView):
     context_object_name = 'article'
 
     def get_queryset(self):
-        self.category = get_object_or_404(Category, name=self.kwargs['cat'])
+        self.category = get_object_or_404(Category, id=self.kwargs['cat'])
         if 'sub' in self.kwargs.keys():
-            self.subcategory = get_object_or_404(self.category.children, name=self.kwargs['sub'])
+            self.subcategory = get_object_or_404(self.category.children, id=self.kwargs['sub'])
         else:
             self.subcategory = None
         return (self.subcategory or self.category).article_set
 
     def get_object(self, queryset=None):
         queryset = queryset or self.get_queryset()
-        self.article = get_object_or_404(queryset, name=self.kwargs['art'])
-        return self.article
+        self.article = get_object_or_404(queryset, id=self.kwargs['art'])
+        if self.article.status == True and self.article.timePublish <= timezone.now():
+            return self.article
+        elif self.article.category.group in self.request.user.groups.all() or self.request.user.is_superuser:
+            return self.article
+        else:
+            raise Http404()
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)

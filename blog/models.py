@@ -3,26 +3,10 @@ import os
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User, Group
-from django.utils import timezone, datetime_safe
+from django.utils import timezone
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
-import markdown
-from xpinyin import Pinyin
-import datetime
-import re
 import shutil
-
-
-def convertToAscii(str, forbidden=r'[\\\-\"\'/:*?<>|,@#$&();+.!%]'):
-    return re.sub('[^\x00-\xff]', '_',
-                  re.sub(forbidden, '_',
-                         Pinyin().get_pinyin(str, "")))
-
-def storage_redirect(instance, name):
-    name = convertToAscii(instance.name) + '.' + name.split('.')[-1]
-    ids = list(map(str, instance.article.category.get_ancestors(include_self=True).values_list('id', flat=True)))
-    path = os.path.join(*ids)
-    return os.path.join(path, str(instance.article_id), name)
 
 
 class CommonInfo(models.Model):
@@ -39,7 +23,7 @@ class CommonInfo(models.Model):
                                    on_delete=models.SET_NULL,
                                    null=True,
                                    editable=False,
-                                   related_name='%(class)s_modified',
+                                   related_name='%(app_label)s_%(class)s_modified',
                                    verbose_name='修改者')
     timeCreate = models.DateTimeField(default=timezone.now,
                                       editable=False,
@@ -48,7 +32,7 @@ class CommonInfo(models.Model):
                                    on_delete=models.SET_NULL,
                                    null=True,
                                    editable=False,
-                                   related_name='%(class)s_created',
+                                   related_name='%(app_label)s_%(class)s_created',
                                    verbose_name='创建者')
 
     class Meta:
@@ -88,9 +72,17 @@ class Category(MPTTModel, CommonInfo):
             else:
                 return '#'
         elif self.level == 1:
-            return reverse('blog:subcategory', kwargs={'cat': self.parent.name, 'sub': self.name})
+            return reverse('blog:subcategory', kwargs={'cat': self.parent.id, 'sub': self.id})
         else:
             return '#'
+
+    def delete(self, using=None, keep_parents=False):
+        ids = list(map(str, self.get_ancestors(include_self=True).values_list('id', flat=True)))
+        path = os.path.join(*ids)
+        path = os.path.join(settings.MEDIA_ROOT, 'blog', path)
+        if os.path.exists(path):
+            shutil.rmtree(path)
+        super().delete(using, keep_parents)
 
     class MPTTMeta:
         order_insertion_by = []
@@ -125,14 +117,22 @@ class Article(CommonInfo):
 
     def get_absolute_url(self):
         if self.category.is_root_node():
-            return reverse('blog:article1', kwargs={'cat': self.category.name, 'art': self.name})
+            return reverse('blog:article1', kwargs={'cat': self.category.id, 'art': self.id})
         elif self.category.level == 1:
-            return reverse('blog:article2', kwargs={'cat': self.category.parent.name,
-                                                    'sub': self.category.name,
-                                                    'art': self.name})
+            return reverse('blog:article2', kwargs={'cat': self.category.parent.id,
+                                                    'sub': self.category.id,
+                                                    'art': self.id})
         else:
             return '#'
 
+    def delete(self, using=None, keep_parents=False):
+        ids = list(self.category.get_ancestors(include_self=True).values_list('id', flat=True)) + [self.id]
+        ids = list(map(str, ids))
+        path = os.path.join(*ids)
+        path = os.path.join(settings.MEDIA_ROOT, 'blog', path)
+        if os.path.exists(path):
+            shutil.rmtree(path)
+        super().delete(using, keep_parents)
 
     class Meta:
         verbose_name_plural = '文章'
@@ -140,6 +140,13 @@ class Article(CommonInfo):
         permissions = (
             ('publish_article', 'Can publish 文章'),
         )
+
+
+def storage_redirect(instance, name):
+    name = '%x' % hash(instance.file) + '.' + name.split('.')[-1]
+    ids = list(map(str, instance.article.category.get_ancestors(include_self=True).values_list('id', flat=True)))
+    path = os.path.join(*ids)
+    return os.path.join('blog', path, str(instance.article_id), name)
 
 
 class Resource(CommonInfo):
@@ -166,8 +173,7 @@ class Resource(CommonInfo):
         return super().save(force_insert, force_update, using, update_fields)
 
     def delete(self, using=None, keep_parents=False):
-        args = [settings.MEDIA_ROOT] + self.url.split('/')[2:]
-        path = os.path.join(*args)
+        path = os.path.join(settings.MEDIA_ROOT, self.file.name)
         if os.path.exists(path):
             os.remove(path)
         return super().delete(using, keep_parents)

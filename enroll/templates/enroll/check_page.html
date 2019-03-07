@@ -1,0 +1,46 @@
+{% extends 'blog/base.html' %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <h1 class="h1">{{ title }}</h1>
+        <hr>
+        <h2 class="h2">已提交内容</h2>
+        <div class="form-group">
+            <label for="candidateEmail">1. 邮箱</label>
+            <input type="email" class="form-control-plaintext"
+                   id="candidateEmail" name="candidateEmail"
+                   value="{{ verify.email }}">
+            <small class="form-text text-muted">通过输入相同的邮箱和密码，您可以覆盖之前提交的报名表。</small>
+        </div>
+        {% for field in form.visible_fields %}
+            {% if field.field.widget.input_type == 'radio' %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ forloop.counter|add:1 }}. {{ field.label }}</label>
+                    <input type="text" class="form-control-plaintext" id="{{ field.id_for_label }}"
+                           value="{% for widget in field.subwidgets %}{% if widget.data.selected %}{{ widget.choice_label }} {% endif %}{% endfor %}">
+                </div>
+            {% elif field.field.widget.input_type == 'checkbox' %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ forloop.counter|add:1 }}. {{ field.label }}</label>
+                    <input type="text" class="form-control-plaintext" id="{{ field.id_for_label }}"
+                           value="{% for widget in field.subwidgets %}{% if widget.data.selected %}{{ widget.choice_label }} {% endif %}{% endfor %}">
+                </div>
+            {% elif field.field.widget.input_type == 'text' %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ forloop.counter|add:1 }}. {{ field.label }}</label>
+                    <input type="text" class="form-control-plaintext" id="{{ field.id_for_label }}" value="{{ field.data }}">
+                </div>
+            {% elif field.field.widget.input_type == 'file' %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ forloop.counter|add:1 }}. {{ field.label }}</label>
+                    <input type="text" class="form-control-plaintext" id="{{ field.id_for_label }}"
+                           value="{{ field.data.name }}">
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endblock %}

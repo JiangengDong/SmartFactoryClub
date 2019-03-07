@@ -6,7 +6,8 @@ def global_context(request):
     for root in roots:
         item = {}
         item['name'] = root.name
-        item['subs'] = root.children.values('name')
-        item['arts'] = root.article_set.values('name')
+        item['id'] = root.id
+        item['subs'] = root.children.values('name', 'id')
+        item['arts'] = root.article_set.values('name', 'id')
         navs.append(item)
-    return {'blog_navbar': navs}
+    return {'blog_navbar': navs, 'domain': 'jiangengdong.top'}

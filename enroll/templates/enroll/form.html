@@ -1,0 +1,78 @@
+{% extends 'blog/base.html' %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <h1 class="h1">{{ title }}</h1>
+        <hr>
+        <h2 class="h2">相关文件下载</h2>
+        <div>
+            {% for resource in resources.all %}
+                <a class="btn btn-primary" href="{{ resource.url }}">{{ resource.name }}</a>
+            {% endfor %}
+        </div>
+        <hr>
+        <h2 class="h2">表格提交</h2>
+        <form action="{% url 'enroll:index' %}" method="post" enctype="multipart/form-data" name="enroll_form" autocomplete="off">
+            {% for hidden_field in form.hidden_fields %}
+                <div class="form-group">
+                    {{ hidden_field }}
+                </div>
+            {% endfor %}
+            <div class="form-group">
+                <label for="candidateEmail">1. 邮箱<span class="text-danger">*</span></label>
+                <input type="email" class="form-control"
+                       id="candidateEmail" required name="candidateEmail"
+                       {% if verify %}value="{{ verify.email }}"{% endif %}>
+            {% if verify and verify.helpText %}
+                <small class="form-text text-danger">{{ verify.helpText|safe }}</small>
+            {% else %}
+                <small class="form-text text-muted">通过输入相同的邮箱和密码，您可以覆盖之前提交的报名表。</small>
+            {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="token">2. 密码<span class="text-danger">*</span></label>
+                <input type="password" class="form-control"
+                       id="token" required name="token">
+                <small class="form-text text-muted" id="tokenHelpText1">请自定义一段密码。</small>
+            </div>
+            {% for field in form.visible_fields %}
+                {% if field.field.widget.input_type == 'file' %}
+                    <div class="form-group">
+                        <label>{{ forloop.counter|add:2 }}.
+                            {{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                        </label>
+                        <div class="custom-file">
+                            {{ field }}
+                            <label class="custom-file-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">{{ forloop.counter|add:2 }}.
+                            {{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% for error in field.errors %}
+                            <small class="form-text text-danger">{{ error }}</small>
+                        {% empty %}
+                            <small class="form-text text-muted">{{ field.help_text }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" id="submit">提交</button>
+            {% csrf_token %}
+        </form>
+    </div>
+    <script>
+        function changeFile(event) {
+            let input = event.target;
+            let label = document.querySelector("label[for=" + input.id + "]");
+            label.innerText = input.value.split(/[\\\/]/).pop();
+        }
+    </script>
+{% endblock %}

@@ -117,6 +117,11 @@ class CategoryAdmin(DraggableMPTTAdmin):
                 obj.group = obj.parent.group
             obj.save()
 
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            if self.has_delete_permission(request, obj):
+                obj.delete()
+
 
 """
 The following two classes work for the article editing pages.
@@ -212,38 +217,47 @@ class ArticleAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return not obj or not obj.status and super().has_delete_permission(request, obj)
 
+    def has_publish_permission(self, request, obj=None):
+        return request.user.has_perm('blog:publish_article')
+
     # queryset actions
     actions = ['withdraw_queryset', 'publish_queryset', 'publish_queryset_immediately']
+
     def withdraw_queryset(self, request, queryset):
-        if request.user.has_perm('blog:publish_article'):
-            qs = queryset.filter(status=True)
-            msg = '成功撤稿%d篇文章' % qs.count()
-            qs.update(status=False)
-            self.message_user(request, msg, messages.SUCCESS)
+        qs = queryset.filter(status=True)
+        msg = '成功撤稿%d篇文章' % qs.count()
+        qs.update(status=False)
+        self.message_user(request, msg, messages.SUCCESS)
     withdraw_queryset.short_description = '撤稿'
+    withdraw_queryset.allowed_permissions = ('publish',)
 
     def publish_queryset(self, request, queryset):
-        if request.user.has_perm('blog:publish_article'):
-            t = timezone.now()
-            qs = queryset.filter(status=False, timePublish__isnull=False)
-            msg = '成功延时发布%d篇文章。' % qs.count()
-            # qs.filter(timePublish__lte=t).update(timePublish=t)
-            qs.update(status=True)
-            self.message_user(request, msg, messages.SUCCESS)
-            qs = queryset.filter(timePublish__isnull=True)
-            for obj in qs:
-                msg = '%s没有指定发布时间，不能延时发布。' % obj.name
-                self.message_user(request, msg, messages.ERROR)
+        t = timezone.now()
+        qs = queryset.filter(status=False, timePublish__isnull=False)
+        msg = '成功延时发布%d篇文章。' % qs.count()
+        # qs.filter(timePublish__lte=t).update(timePublish=t)
+        qs.update(status=True)
+        self.message_user(request, msg, messages.SUCCESS)
+        qs = queryset.filter(timePublish__isnull=True)
+        for obj in qs:
+            msg = '%s没有指定发布时间，不能延时发布。' % obj.name
+            self.message_user(request, msg, messages.ERROR)
     publish_queryset.short_description = '延时发布'
+    publish_queryset.allowed_permissions = ('publish', )
 
     def publish_queryset_immediately(self, request, queryset):
-        if request.user.has_perm('blog:publish_article'):
-            t = timezone.now()
-            qs = queryset.filter(status=False)
-            msg = '成功发布%d篇文章。' % qs.count()
-            qs.update(status=True, timePublish=t)
-            self.message_user(request, msg, messages.SUCCESS)
+        t = timezone.now()
+        qs = queryset.filter(status=False)
+        msg = '成功发布%d篇文章。' % qs.count()
+        qs.update(status=True, timePublish=t)
+        self.message_user(request, msg, messages.SUCCESS)
     publish_queryset_immediately.short_description = '立即发布'
+    publish_queryset_immediately.allowed_permissions = ('publish', )
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            if self.has_delete_permission(request, obj):
+                obj.delete()
 
 
 
@@ -287,6 +301,11 @@ class ResourceAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return not obj or not obj.article.status and super().has_delete_permission(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            if self.has_delete_permission(request, obj):
+                obj.delete()
 
 
 admin.site.site_header = '智能工厂创新俱乐部'

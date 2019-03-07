@@ -62,10 +62,12 @@
                         {% endif %}
                         <div class="dropdown-menu bg-dark" aria-labelledby="navbar{{ category.name }}">
                             {% for sub in category.subs %}
-                                <a class="dropdown-item text-light" href="{% url 'blog:subcategory' category.name sub.name %}">{{ sub.name }}</a>
+                                <a class="dropdown-item text-light"
+                                   href="{% url 'blog:subcategory' category.id sub.id %}">{{ sub.name }}</a>
                             {% endfor %}
                             {% for art in category.arts %}
-                                <a class="dropdown-item text-light" href="{% url 'blog:article1' category.name art.name %}">{{ art.name }}</a>
+                                <a class="dropdown-item text-light"
+                                   href="{% url 'blog:article1' category.id art.id %}">{{ art.name }}</a>
                             {% endfor %}
                         </div>
                     </li>
@@ -91,29 +93,52 @@
             {% for sub in category.subs %}
                 {% if sub.name == active_navbar.sub.name %}
                     <a class="nav-item nav-link text-light font-weight-bold px-md-5 py-md-3 mx-sm-3 mx-md-5 active"
-                       href="{% url 'blog:subcategory' category.name sub.name %}">{{ sub.name }}</a>
+                       href="{% url 'blog:subcategory' category.id sub.id %}">{{ sub.name }}</a>
                 {% else %}
                     <a class="nav-item nav-link text-light font-weight-bold px-md-5 py-md-3 mx-sm-3 mx-md-5"
-                       href="{% url 'blog:subcategory' category.name sub.name %}">{{ sub.name }}</a>
+                       href="{% url 'blog:subcategory' category.id sub.id %}">{{ sub.name }}</a>
                 {% endif %}
             {% endfor %}
             {% for sub in category.arts %}
                 {% if sub.name == active_navbar.sub.name %}
                     <a class="nav-item nav-link text-light font-weight-bold px-md-5 py-md-3 mx-sm-3 mx-md-5 active"
-                       href="{% url 'blog:article1' category.name sub.name %}">{{ sub.name }}</a>
+                       href="{% url 'blog:article1' category.id sub.id %}">{{ sub.name }}</a>
                 {% else %}
                     <a class="nav-item nav-link text-light font-weight-bold px-md-5 py-md-3 mx-sm-3 mx-md-5"
-                       href="{% url 'blog:article1' category.name sub.name %}">{{ sub.name }}</a>
+                       href="{% url 'blog:article1' category.id sub.id %}">{{ sub.name }}</a>
                 {% endif %}
             {% endfor %}
         </nav>
     {% endif %}
 {% endfor %}
 
-
+<main role="main">
 {% block body %}
-
 {% endblock %}
+</main>
+
+<footer class="bg-dark text-light py-3" style="position: relative; bottom: 0; width: 100%;">
+    <div class="container">
+        <div class="row">
+            <div class="col-5 align-self-center">
+                <p class="font-weight-bold">联系我们</p>
+
+                <p>邮&nbsp;&nbsp;&nbsp;&nbsp;箱：<a class="text-light" href="mailto:zju_smartfactory@163.com">zju_smartfactory@163.com</a>
+                </p>
+            </div>
+            <div class="col-5 align-self-center">
+                <p class="font-weight-bold">加入我们</p>
+
+                <p>报名链接：<a class="text-light" href="{% url 'enroll:index' %}">{{ domain }}{% url 'enroll:index' %}</a>
+                </p>
+            </div>
+            <div class="col-2">
+                <img class="my-2" src="{% static 'blog/img/qrcode.jpg' %}" alt="浙大智能工厂学生创新实验室" height="100pt"
+                     width="100pt">
+            </div>
+        </div>
+    </div>
+</footer>
 
 <script src="{% static 'blog/js/jquery-3.3.1.min.js' %}"></script>
 <script src="{% static 'blog/js/popper.min.js' %}"></script>
